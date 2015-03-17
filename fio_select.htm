@@ -1,0 +1,247 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<title>Выбор из справочника</title>
+<style>
+INPUT {font-size:10pt;color: black; text-align: left;background-color: white; font-family: "MS Sans Serif"; }
+table {
+	background-color:#ebebe1;width:100%;
+}
+td {
+	font-size:12pt;
+	font-family:"Times New Roman";
+	padding-left:5px;
+	white-space:nowrap;
+	background-color:white;
+	border:1px solid white;
+}
+td.selected {
+	background-color:#000060;color:white;
+}
+body {
+	background-color:#ebebe1;
+}
+</style>
+<script>
+var d=window.dialogArguments[0];
+lib=window.dialogArguments[1];
+station=window.dialogArguments[2];
+var fio=window.dialogArguments[3];
+var sign=window.dialogArguments[4];
+//===================================================
+var selected;
+var focused;
+var t;
+//===================================================
+function enter()
+{
+	var result = new Array();
+	for(i=0;i<t.rows.length;i++)
+		{
+			if(t.rows[i].firstChild.className == 'selected') 
+			result.push(t.rows[i].firstChild.innerText);
+		}
+	if(result.length!=0) window.returnValue=result;
+	else window.returnValue=null;
+	self.close();
+}
+//===================================================
+function init()
+{
+window.focus();
+t = document.getElementById('t');
+var dt = lib.dtable(d);
+var i=0;
+while(row = dt.fetch())
+	{
+		cell = t.insertRow(-1).insertCell(-1);
+		cell.innerText = row[d.header.Name]
+		cell.id=i;
+		cell.onclick = function(evt)
+		{
+			focused=this;
+			$("td.selected").removeClass("selected");
+			this.className = 'selected';
+			//this.className = (this.className!='')?'':'selected';
+		}
+			cell.ondblclick = enter;
+			
+		i++;	
+	}	
+	if(fio) Fio.value=fio;
+	Fio.focus();
+}
+//===================================================
+function add()
+{
+if(!Fio.value)return;
+if(lib.check_fio(Fio,window)=='err')return;
+$.post("fio_save.php", { Fio:Fio.value,station:station,sign:sign}, function(data){
+if(data=='')
+	{
+		cell = t.insertRow(-1).insertCell(-1);
+		cell.innerText=Fio.value;
+		сell.onclick = function(evt)
+			{
+			focused=this;
+			$("td.selected").removeClass("selected");
+			this.className = 'selected';
+			}
+			cell.ondblclick = enter;
+				
+			Fio.value='';
+			$('#Fio').keyup();
+	}
+	else return;	
+   });
+  
+}
+//===================================================
+function rem()
+{
+if(Fio.value)Fio.value='';
+	for(i=0;i<t.rows.length;i++)
+		{
+			if(t.rows[i].firstChild.className == 'selected') 
+				{
+				var fio=t.rows[i].firstChild.innerText;
+				cell.id=i;
+				t.deleteRow(i);
+				}
+		}
+$.post("fio_del.php", { Fio:fio,station:station,sign:sign}, function(data){
+
+   });
+   
+ } 
+//===================================================
+function filter(selector, query) 
+{
+  query =   $.trim(query); // Обрезать пробелы
+  query = query.replace(/ /gi, '|'); // Добавим ИЛИ к регулярному выражению
+ 
+  $(selector).each(function() 
+  {
+     if ($(this).text().search(new RegExp('^'+query, "i")) < 0) {
+    $(this).hide().removeClass('visible');
+  } 
+  else 
+  {
+    $(this).show().addClass('visible');
+  }
+  
+  });
+}
+//===================================================
+function check()
+{
+ if (window.event.keyCode==13)
+	{
+		if(focused) focused.click();
+		enter();
+	}
+if (window.event.keyCode==27) {window.returnValue=null;self.close();}
+
+if (window.event.keyCode==40)
+	{
+			var found = false;
+			var start = focused?focused.parentElement.rowIndex+1:0;
+			var rows = document.getElementById('t').rows;
+			for(i=start;i<rows.length;i++)
+			{
+				if(rows[i] && rows[i].style.display!='none')
+				{
+					focused = rows[i].cells[0];
+					found=true;
+					break;
+				}
+			}
+			if(!found) for(i=0;i<start;i++)
+			{
+				if(rows[i] && rows[i].style.display!='none')
+				{
+					focused = rows[i].cells[0];
+					break;
+				}
+			}
+		if(focused)
+		{	
+			$("td.selected").removeClass("selected");
+			$(focused).addClass('selected');
+			focused.scrollIntoView(true);
+		}
+	
+	}
+	if (window.event.keyCode==38)
+	{
+			var found = false;
+			var rows = document.getElementById('t').rows;
+			var start = focused?focused.parentElement.rowIndex-1:rows[rows.length-1];
+			
+			
+			
+			for(i=start;i>=0;i--)
+			{
+				if(rows[i] && rows[i].style.display!='none')
+				{
+					focused = rows[i].cells[0];
+					found=true;
+					break;
+				}
+			}
+			if(!found) for(i=rows.length-1;i>start;i--)
+			{
+				if(rows[i] && rows[i].style.display!='none')
+				{
+					focused = rows[i].cells[0];
+					break;
+				}
+			}
+	
+		if(focused)
+		{
+		$("td.selected").removeClass("selected");
+		focused.className = 'selected';
+		focused.scrollIntoView(true);
+		}
+		
+	}
+	
+	if (window.event.keyCode==32 && focused)
+	{
+		focused.click();
+	}
+	
+ $("tr").addClass("visible");	
+ 	
+	
+   $('#Fio').keyup(function(event) {
+  
+	if (window.event.keyCode == 27 || $(this).val() == '')  // Если нажат Escape или ничего не введено 
+		{
+      $(this).val('');  // Если нажат Escape, нужно очистить строку поиска 
+      $('tr').removeClass('visible').show().addClass('visible');
+	  // Отобразим все строки, так как если ничего не введено, все строки должны быть видны
+    	}
+    else {filter('tr', $(this).val());
+		 
+		  } // Если введён текст, будем фильтровать
+    
+	});
+	
+}	
+//===================================================
+</script>
+<script type="text/javascript" src="/common/jquery.js"></script>
+</head>
+<body onload='init();' onkeydown="check();" >
+<input id=Fio  style='margin-top:3px;margin-left:3px;width:180px;'>
+
+<div style="height:75%;width:98%;overflow-y:scroll;overflow-x:hidden;padding:3px;margin:px;" id="scrolldiv">
+<table id="t" cellspacing="2">
+</table>
+</div>
+<button onclick="rem()" style="margin-left:25%;margin-top:0px">Удалить</button>
+<button onclick="add()" style="margin-left:3px">Добавить</button>
+</body>
+</html>
